@@ -1,5 +1,5 @@
 # objectc2
-work in progress c object library heavily based on macro tricks
+work in progress c object library heavily based on macro tricks. currently has no real functionality
 
 # short description
 currently can expand simple definition into pretty complete structs containing info about the class such as fields, field options, functions and its arguments etc
