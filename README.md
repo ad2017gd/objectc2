@@ -180,3 +180,26 @@ void Rectangle_scale(Rectangle * this, double factor) {
         -   - Size : 8 bytes
         -   - Type : "double"
 ```
+
+# a more in-depth overview
+fields and functions are separated using `$fields(...)` and `$functions(...)` function-like macros, which are identical, only serving the purpose of grouping multiple entries into 1 single macro argument that is then expanded.
+
+each entry is then also packed using parantheses and will be expanded after iteration using a macro implementation of "for"
+
+## fields
+objectc2 stores the name and type of fields as strings. it is recommended to use string_t and wstring_t to help with serialization (when implemented), as the macro stringification operator will not catch the full
+"char*", only stringifying "char"
+
+furthermore, it stores the size, offset (see `ou_offset`) and other field options in the resulting struct
+
+## functions
+functions have to be both implemented but also have their information stored.
+
+function implementation is pretty straight-forward. arguments are unpacked and prepended by the instance `this` of the class type
+
+objectc2 stores the function name and return type as strings. it also stores the offset in the struct, options, return size and information about arguments.
+
+objectc2 stores function arguments' name and type as strings, but also offset and size. the offset is calculated by reversing the argument list and implementing another "for" that sums all the sizes of
+next (normally previous, but list is reversed) arguments, effectively calculating the offset of said argument
+
+usually, sizeof(void) returns 1, which is a problem for the return size of functions, but this is fixed using a macro trick (see `oi_is_void`)
