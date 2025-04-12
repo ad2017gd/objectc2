@@ -137,3 +137,46 @@ void Rectangle_scale(Rectangle * this, double factor) {
 
 
 </details>
+
+# "classwalk" output for Rectangle class
+
+```
+----[Rectangle]----
+
+    - FIELD: X
+    -   - Size : 8 bytes
+    -   - Offset : 8 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(0)
+    - FIELD: Y
+    -   - Size : 8 bytes
+    -   - Offset : 16 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(0)
+    - FIELD: Width
+    -   - Size : 8 bytes
+    -   - Offset : 24 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(0)
+    - FIELD: Height
+    -   - Size : 8 bytes
+    -   - Offset : 32 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(0)
+    - FUNCTION: area
+    -   - Return size : 8 bytes
+    -   - Offset : 40 bytes
+    -   - Return type : "double"
+    -   - Options: access(0)
+    -   - Argument count : 0
+    - FUNCTION: scale
+    -   - Return size : 0 bytes
+    -   - Offset : 48 bytes
+    -   - Return type : "void"
+    -   - Options: access(0)
+    -   - Argument count : 1
+        - ARGUMENT: factor
+        -   - Offset : 0 bytes
+        -   - Size : 8 bytes
+        -   - Type : "double"
+```
