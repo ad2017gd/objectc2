@@ -187,7 +187,7 @@ fields and functions are separated using `$fields(...)` and `$functions(...)` fu
 each entry is then also packed using parantheses and will be expanded after iteration using a macro implementation of "for"
 
 ## fields
-objectc2 stores the name and type of fields as strings. it is recommended to use string_t and wstring_t to help with serialization (when implemented), as the macro stringification operator will not catch the full
+objectc2 stores the name and type of fields as strings. it is recommended to use `string_t` and `wstring_t` to help with serialization (when implemented), as the macro stringification operator will not catch the full
 "char*", only stringifying "char"
 
 furthermore, it stores the size, offset (see `ou_offset`) and other field options in the resulting struct
