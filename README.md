@@ -194,7 +194,7 @@ furthermore, it stores the size, offset (see `ou_offset`) and other field option
 ## functions
 functions have to be both implemented but also have their information stored.
 
-function implementation is pretty straight-forward. arguments are unpacked and prepended by the instance `this` of the class type
+function implementation is pretty straight-forward. arguments are unpacked and prepended by the instance `this` of the class type, unless the function is marked as static.
 
 objectc2 stores the function name and return type as strings. it also stores the offset in the struct, options, return size and information about arguments.
 
