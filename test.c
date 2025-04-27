@@ -13,6 +13,10 @@ $class(Rectangle,
             return this->Width*this->Height;
         )),
 
+        ($opt(PUBLIC STATIC), double, testt, $arg(), $body(
+            return 1;
+        )),
+
         ($opt(PUBLIC), void, scale, $arg( (double, factor), (double, factor2), (char, x), (int, factor3) ), $body(
             this->Width*=factor;
             this->Height*=factor;

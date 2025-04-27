@@ -69,6 +69,22 @@ typedef wchar_t * wstring_t;
 
 // FUNCTIONS
 
+// Check if function options contain STATIC
+#define oi_test_static(y,x,...) x ## __TEST
+
+#define oi_if_static___(n, IFTRUE, IFFALSE, ...) omp_if_2nd_zero(n, IFFALSE, IFTRUE, __VA_ARGS__)
+#define oi_if_static__(IFTRUE, IFFALSE, ARGS, ...) oi_if_static___(omp_narg(__VA_ARGS__), IFTRUE, IFFALSE, ARGS)
+#define oi_if_static_(IFTRUE, IFFALSE, ARGS, ...) oi_if_static__(IFTRUE, IFFALSE, omp_pack_(ARGS), omp_for_2nd(oi_test_static, 0, __VA_ARGS__))
+#define oi_if_static(opts, IFTRUE, IFFALSE, ...) oi_if_static_(IFTRUE, IFFALSE, omp_pack_(__VA_ARGS__), omp_pack_ opts)
+
+
+#define oi_add_this_static(cl_name, packed_args) packed_args
+
+#define oi_add_this___(...) $pack(__VA_ARGS__)
+#define oi_add_this__(cl_name, ...) oi_add_this___((cl_name *, this) oi_unpack_args_comma(__VA_ARGS__) __VA_ARGS__)
+#define oi_add_this_(cl_name, packed_args) oi_add_this__(cl_name, omp_pack_ packed_args)
+#define oi_add_this(cl_name, packed_args, opts) oi_if_static(opts, oi_add_this_static, oi_add_this_, cl_name, packed_args)
+
 // FUNCTIONS     PROTOTYPE
 #define oi_unpack_arg_(datatype, name) , datatype name
 #define oi_unpack_arg(N,packed,...) oi_unpack_arg_ packed
@@ -103,7 +119,8 @@ typedef wchar_t * wstring_t;
 #define oi_for_unpack__(V) oi_expand_args V omp_comma()
 #define oi_for_unpack_(c, V, ...) omp_if_zero(c,omp_empty,oi_for_unpack__, V)
 #define oi_for_unpack(N, V, ...) oi_for_unpack_(omp_narg(V),V)
-#define oi_args_create_function(class_name, field_options, field_datatype, field_name, args, body, ...) struct ObjC_FuncArgument class_name ## _Func_ ## field_name ## _Arguments[] = {omp_for_3rd(oi_for_unpack, 0, omp_apply(omp_reverse,oi_create_function_args(class_name, field_name, oi_expand_args args)))};
+#define oi_args_create_function_(class_name, field_options, field_datatype, field_name, args, body, ...) struct ObjC_FuncArgument class_name ## _Func_ ## field_name ## _Arguments[] = {omp_for_3rd(oi_for_unpack, 0, omp_apply(omp_reverse,oi_create_function_args(class_name, field_name, oi_expand_args args)))};
+#define oi_args_create_function(class_name, field_options, field_datatype, field_name, args, body, ...) oi_args_create_function_(class_name, field_options, field_datatype, field_name, oi_add_this(class_name, args, field_options), body, __VA_ARGS__)
 #define oi_args_expand_function_descriptor__(cl_name, ...) oi_args_create_function(cl_name, __VA_ARGS__)
 #define oi_args_expand_function_descriptor_(tuple, cl_name) oi_args_expand_function_descriptor__(cl_name, oi_expand_function tuple)
 #define oi_args_expand_function_descriptor(N, tuple, cl_name, ...) oi_args_expand_function_descriptor_(tuple, cl_name)
@@ -115,7 +132,8 @@ typedef wchar_t * wstring_t;
 
 #define oi_expand_function(datatype, name, options, ...) datatype, name, options, __VA_ARGS__
 
-#define oi_create_function(class_name, field_options, field_datatype, field_name, args, body, ...) { .name = omp_string(field_name), .return_type = omp_string(field_datatype), .options = (struct ObjC_FuncOptions) oi_unpack_opts field_options, .return_size = oi_return_size(field_datatype), .offset = ou_offset(class_name, field_name), .argument_count = omp_narg args, .arguments = (struct ObjC_FuncArgument *)& class_name ## _Func_ ## field_name ## _Arguments },
+#define oi_create_function_(class_name, field_options, field_datatype, field_name, args, body, ...) { .name = omp_string(field_name), .return_type = omp_string(field_datatype), .options = (struct ObjC_FuncOptions) oi_unpack_opts field_options, .return_size = oi_return_size(field_datatype), .offset = ou_offset(class_name, field_name), .argument_count = omp_narg args, .arguments = (struct ObjC_FuncArgument *)& class_name ## _Func_ ## field_name ## _Arguments },
+#define oi_create_function(class_name, field_options, field_datatype, field_name, args, body, ...) oi_create_function_(class_name, field_options, field_datatype, field_name, oi_add_this(class_name, args, field_options), body, __VA_ARGS__)
 
 #define oi_expand_function_descriptor__(cl_name, ...) oi_create_function(cl_name, __VA_ARGS__)
 #define oi_expand_function_descriptor_(tuple, cl_name) oi_expand_function_descriptor__(cl_name, oi_expand_function tuple)
@@ -124,18 +142,10 @@ typedef wchar_t * wstring_t;
 
 // FUNCTIONS     BODY
 
-// Check if function options contain STATIC
-#define oi_test_static(y,x,...) x ## __TEST
 
-#define oi_if_static___(n, IFTRUE, IFFALSE, ...) omp_if_2nd_zero(n, IFFALSE, IFTRUE, __VA_ARGS__)
-#define oi_if_static__(IFTRUE, IFFALSE, ARGS, ...) oi_if_static___(omp_narg(__VA_ARGS__), IFTRUE, IFFALSE, ARGS)
-#define oi_if_static_(IFTRUE, IFFALSE, ARGS, ...) oi_if_static__(IFTRUE, IFFALSE, omp_pack_(ARGS), omp_for_2nd(oi_test_static, 0, __VA_ARGS__))
-#define oi_if_static(opts, IFTRUE, IFFALSE, ...) oi_if_static_(IFTRUE, IFFALSE, omp_pack_(__VA_ARGS__), omp_pack_ opts)
-
-#define oi_this_argument(class_name, packed_args) class_name * this oi_unpack_args_comma packed_args
-
-#define oi_create_function_body(class_name, opts, return_type, func_name, packed_args, body, ...) \
-return_type class_name ## _ ## func_name (oi_if_static(opts, omp_empty, oi_this_argument, class_name, packed_args) oi_unpack_args packed_args) {oi_unpack_generic body}
+#define oi_create_function_body_(class_name, opts, return_type, func_name, packed_args, body, ...) \
+return_type class_name ## _ ## func_name (oi_unpack_args packed_args) {oi_unpack_generic body}
+#define oi_create_function_body(class_name, opts, return_type, func_name, packed_args, body, ...) oi_create_function_body_(class_name, opts, return_type, func_name, oi_add_this(class_name, packed_args, opts), body, __VA_ARGS__)
 
 #define oi_expand_function_bodies__(cl_name, ...) oi_create_function_body(cl_name, __VA_ARGS__)
 #define oi_expand_function_bodies_(tuple, cl_name) oi_expand_function_bodies__(cl_name, oi_expand_function tuple)
@@ -252,7 +262,7 @@ struct ObjC_GeneralClassDescriptor cl_name ## _Class = { \
 }; \
 oi_function_bodies(cl_name, _FUNCS)
 
-#define $class(cl_name, _FIELDS, _FUNCS) \
+#define $class(cl_name, _FIELDS, _FUNCS, ...) \
 typedef struct { \
     struct ObjC_GeneralClassDescriptor* class; \
     struct ObjC_Object* object; \
