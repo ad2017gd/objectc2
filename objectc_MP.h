@@ -26,6 +26,8 @@
 #define omp_glue2_(a,b) a ## b
 #define omp_glue2(a,b) omp_glue2_(a,b)
 
+#define omp_string(a) #a
+
 #define omp_for(macro,opt,...) omp_glue2(omp_for_, omp_narg(__VA_ARGS__))(macro, opt, __VA_ARGS__)
 #define omp_for_2nd(macro,opt,...) omp_glue2(omp_for_2nd_, omp_narg(__VA_ARGS__))(macro, opt, __VA_ARGS__)
 #define omp_for_3rd(macro,opt,...) omp_glue2(omp_for_3rd_, omp_narg(__VA_ARGS__))(macro, opt, __VA_ARGS__)
@@ -334,6 +336,7 @@
 #define omp_for_2nd_96(m,opt,V,...) m(96, V, opt, __VA_ARGS__) omp_for_2nd_95(m, opt, __VA_ARGS__)
 
 
+
 #define omp_for_3rd_0(m,opt,V,...) 
 #define omp_for_3rd_1(m,opt,V,...) m(1, V, opt, __VA_ARGS__)
 #define omp_for_3rd_2(m,opt,V,...) m(2, V, opt, __VA_ARGS__) omp_for_3rd_1(m, opt, __VA_ARGS__)
@@ -477,3 +480,4 @@
 #define omp_if_2nd_zero(V, is_zero, not_zero, ...) omp_glue2(omp_if_2nd_, V)(is_zero, not_zero, __VA_ARGS__)
 
 #define omp_pack_(...) __VA_ARGS__
+#define omp_pack__(...) __VA_ARGS__

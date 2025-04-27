@@ -1,23 +1,25 @@
 #include "objectc.h"
 
 
-$class(MyClass,
+$class(Rectangle,
     $fields(
-        (int, test, $opt(PUBLIC SERIALIZABLE)),
-        (string_t, stringy_test, $opt(PUBLIC SERIALIZABLE))),
+        ($opt(PUBLIC SERIALIZABLE), double, X),
+        ($opt(PUBLIC SERIALIZABLE), double, Y),
+        ($opt(PUBLIC SERIALIZABLE), double, Width),
+        ($opt(PUBLIC SERIALIZABLE), double, Height)
+    ),
     $functions(
-        (string_t, stringy_test2, $arg((int, test), (double, f)), $body(
-            // this is function code
-            int a = 1; 
-            string_t string = "aaaaaabbb"; 
-            int test223[] = {1, 2, 3, 4, sizeof(void)}; 
-            return string;
-        ), $opt(PUBLIC)),
-        (void, lol, $arg(), $body(
+        ($opt(PUBLIC), double, area, $arg(), $body(
+            return this->Width*this->Height;
+        )),
 
-        ),$opt(STATIC))
-        )
-    );
+        ($opt(PUBLIC), void, scale, $arg( (double, factor), (double, factor2), (char, x), (int, factor3) ), $body(
+            this->Width*=factor;
+            this->Height*=factor;
+        ))
+    )
+);
+
 
 void classwalk(struct ObjC_GeneralClassDescriptor d)
 {
@@ -63,5 +65,5 @@ void classwalk(struct ObjC_GeneralClassDescriptor d)
 
 int main()
 {
-    classwalk(MyClass_Class);
+    classwalk(Rectangle_Class);
 }
