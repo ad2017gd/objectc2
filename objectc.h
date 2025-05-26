@@ -367,7 +367,7 @@ omp_if_zero(omp_narg(__VA_ARGS__), oi_default_constructor, oi_constructor, cl_na
 
 void* objc_find(struct ObjC_State* state, ObjC_BaseObject* obj, char* name);
 
-#define $ptr(obj, type, name) ((type)objc_find(&__objc__state, (ObjC_BaseObject*)obj, omp_string(name)))
+#define $ptr(obj, type, name) ((type)objc_find(&__objc__state, (ObjC_BaseObject*)obj, name))
 #define $get(obj, type, name) (*$ptr(obj,type *,name))
 #define $obj(obj) (((ObjC_BaseObject*)obj)->object)
 
