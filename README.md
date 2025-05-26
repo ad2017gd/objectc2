@@ -3,7 +3,8 @@ work in progress c object library heavily based on macro tricks. currently has n
 
 # short description
 currently can expand simple definition into pretty complete structs containing info about the class such as fields, field options, functions and its arguments etc
-![image](https://github.com/user-attachments/assets/9e8d2bf2-4ae0-48be-82da-7877c9c19b1a)
+![image](https://github.com/user-attachments/assets/7d602fda-b34d-4877-b92f-051d12302625)
+
 
 <details>
 <summary>See comparison</summary>
