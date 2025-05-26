@@ -3,7 +3,8 @@ work in progress c object library heavily based on macro tricks. currently has n
 
 # short description
 currently can expand simple definition into pretty complete structs containing info about the class such as fields, field options, functions and its arguments etc
-![image](https://github.com/user-attachments/assets/9e8d2bf2-4ae0-48be-82da-7877c9c19b1a)
+![image](https://github.com/user-attachments/assets/7d602fda-b34d-4877-b92f-051d12302625)
+
 
 <details>
 <summary>See comparison</summary>
@@ -18,24 +19,55 @@ currently can expand simple definition into pretty complete structs containing i
 <td valign=top>
   
 ```c
-$class(Rectangle,
+#include "objectc.h"
+
+$class(Shape,
     $fields(
-        (double, X, $opt(PUBLIC SERIALIZABLE)),
-        (double, Y, $opt(PUBLIC SERIALIZABLE)),
-        (double, Width, $opt(PUBLIC SERIALIZABLE)),
-        (double, Height, $opt(PUBLIC SERIALIZABLE))
+        ($opt(PUBLIC SERIALIZABLE), double, X),
+        ($opt(PUBLIC SERIALIZABLE), double, Y),
+        ($opt(PUBLIC SERIALIZABLE), double, Width),
+        ($opt(PUBLIC SERIALIZABLE), double, Height),
+        ($opt(PUBLIC SERIALIZABLE), double, PublicField),
+        ($opt(PROTECTED SERIALIZABLE), double, ProtectedField),
+        ($opt(PRIVATE SERIALIZABLE), double, PrivateField)
+     ),
+    $functions()
+);
+
+$class(Rectangle $extends Shape,
+    $fields(
+        ($opt(PUBLIC SERIALIZABLE), double, X2)),
+    $functions(
+        ($opt(PUBLIC), double, area, $arg((double, scale)), $body({
+             printf("    Called Rectangle.area with scale=%f\n", scale);
+             double *procf = $ptr(this, double *, ProtectedField);
+             printf("    Trying to get protected field of Shape in Rectangle context. Expect %p==%p\n", procf, &this->super.ProtectedField);
+             double *privf = $ptr(this, double *, PrivateField);
+             printf("    Trying to get private field of Shape in Rectangle context. Expect %p==0\n", privf);
+             return this->super.Width * this->super.Height + 1;
+        })),
+
+        ($opt(PUBLIC), void, scale, $arg((double, factor), (double, factor2)), $body({
+             this->super.Width *= factor;
+             this->super.Height *= factor;
+        }))
+    ),
+    $constructor(
+        this->super.Width = 0;
+        this->super.Height = 0;
+        this->super.X = 0;
+        this->super.Y = 0;
+     )
+);
+
+$class(CoolRectangle $extends Rectangle,
+    $fields(
+        ($opt(), char*, coolrectname)
     ),
     $functions(
-        (double, area, $arg(), $body(
-            return this->Width*this->Height;
-        ), $opt(PUBLIC)),
-
-        (void, scale, $arg( (double, factor) ), $body(
-            this->Width*=factor;
-            this->Height*=factor;
-        ), $opt(PUBLIC))
+        
     )
-);
+)
 ```
 
 </td>
@@ -44,90 +76,263 @@ $class(Rectangle,
 ```c
 #include "objectc.h"
 
-typedef struct {
+typedef struct Shape {
     struct ObjC_GeneralClassDescriptor * class;
+    struct ObjC_Object * object;
     double X;
     double Y;
     double Width;
     double Height;
-    double (*area)();
-    void (*scale)();
-} Rectangle;
-struct ObjC_FuncArgument Rectangle_Func_area_Arguments[] = {};
+    double PublicField;
+    double ProtectedField;
+    double PrivateField;
+}
+Shape;
+struct ObjC_ClassFieldsDescriptor Shape_Fields = {
+    .size = 7,
+    .fields = {
+        {
+            .name = "X", .type = "double", .options = (struct ObjC_FieldOptions) {
+                .access = 1, .access = 0, .serializable = 1,
+            }, .size = sizeof(double), .offset = ((size_t) & (((Shape * ) 0) -> X))
+        },
+        {
+            .name = "Y",
+            .type = "double",
+            .options = (struct ObjC_FieldOptions) {
+                .access = 1, .access = 0, .serializable = 1,
+            },
+            .size = sizeof(double),
+            .offset = ((size_t) & (((Shape * ) 0) -> Y))
+        },
+        {
+            .name = "Width",
+            .type = "double",
+            .options = (struct ObjC_FieldOptions) {
+                .access = 1, .access = 0, .serializable = 1,
+            },
+            .size = sizeof(double),
+            .offset = ((size_t) & (((Shape * ) 0) -> Width))
+        },
+        {
+            .name = "Height",
+            .type = "double",
+            .options = (struct ObjC_FieldOptions) {
+                .access = 1, .access = 0, .serializable = 1,
+            },
+            .size = sizeof(double),
+            .offset = ((size_t) & (((Shape * ) 0) -> Height))
+        },
+        {
+            .name = "PublicField",
+            .type = "double",
+            .options = (struct ObjC_FieldOptions) {
+                .access = 1, .access = 0, .serializable = 1,
+            },
+            .size = sizeof(double),
+            .offset = ((size_t) & (((Shape * ) 0) -> PublicField))
+        },
+        {
+            .name = "ProtectedField",
+            .type = "double",
+            .options = (struct ObjC_FieldOptions) {
+                .access = 1, .access = 1, .serializable = 1,
+            },
+            .size = sizeof(double),
+            .offset = ((size_t) & (((Shape * ) 0) -> ProtectedField))
+        },
+        {
+            .name = "PrivateField",
+            .type = "double",
+            .options = (struct ObjC_FieldOptions) {
+                .access = 1, .access = 2, .serializable = 1,
+            },
+            .size = sizeof(double),
+            .offset = ((size_t) & (((Shape * ) 0) -> PrivateField))
+        },
+    }
+};
+struct ObjC_ClassFunctionsDescriptor Shape_Functions = {
+    .size = 0,
+    .functions = {}
+};
+struct ObjC_GeneralClassDescriptor Shape_Class = {
+    .name = "Shape",
+    .total_size = sizeof(Shape),
+    .super = 0,
+    .fields = & Shape_Fields,
+    .functions = & Shape_Functions
+};
+Shape * Shape_new() {
+    struct ObjC_State __objc__state = {
+        .class = & Shape_Class
+    };
+    Shape * this = (Shape * ) malloc(sizeof(Shape));
+    this -> class = & Shape_Class;
+    ((ObjC_BaseObject * ) this) -> object = (struct ObjC_Object * ) malloc(sizeof(struct ObjC_Object));
+    ((ObjC_BaseObject * ) this) -> object -> total_size = sizeof(Shape);
+    return this;
+};
+
+typedef struct Rectangle {
+    Shape super;
+    struct ObjC_GeneralClassDescriptor * class;
+    double X2;
+    double( * area)(struct Rectangle * this, double scale);
+    void( * scale)(struct Rectangle * this, double factor, double factor2);
+}
+Rectangle;
+struct ObjC_FuncArgument Rectangle_Func_area_Arguments[] = {
+    {
+        .name = "this", .type = "struct Rectangle *", .size = sizeof(struct Rectangle * ), .offset = 0
+    },
+    {
+        .name = "scale",
+        .type = "double",
+        .size = sizeof(double),
+        .offset = 0 + sizeof(struct Rectangle * )
+    },
+};
 struct ObjC_FuncArgument Rectangle_Func_scale_Arguments[] = {
-  {
-    .name = "factor", .type = "double", .size = sizeof(double), .offset = 0
-  },
+    {
+        .name = "this", .type = "struct Rectangle *", .size = sizeof(struct Rectangle * ), .offset = 0
+    },
+    {
+        .name = "factor",
+        .type = "double",
+        .size = sizeof(double),
+        .offset = 0 + sizeof(struct Rectangle * )
+    },
+    {
+        .name = "factor2",
+        .type = "double",
+        .size = sizeof(double),
+        .offset = 0 + sizeof(double) + sizeof(struct Rectangle * )
+    },
 };
 struct ObjC_ClassFieldsDescriptor Rectangle_Fields = {
-  .size = 4,
-  .fields = {
-    {
-      .name = "X", .type = "double", .options = (struct ObjC_FieldOptions) {
-        .access = 1, .access = 0, .serializable = 1,
-      }, .size = sizeof(double), .offset = ((size_t) & (((Rectangle * ) 0) -> X))
-    },
-    {
-      .name = "Y",
-      .type = "double",
-      .options = (struct ObjC_FieldOptions) {
-        .access = 1, .access = 0, .serializable = 1,
-      },
-      .size = sizeof(double),
-      .offset = ((size_t) & (((Rectangle * ) 0) -> Y))
-    },
-    {
-      .name = "Width",
-      .type = "double",
-      .options = (struct ObjC_FieldOptions) {
-        .access = 1, .access = 0, .serializable = 1,
-      },
-      .size = sizeof(double),
-      .offset = ((size_t) & (((Rectangle * ) 0) -> Width))
-    },
-    {
-      .name = "Height",
-      .type = "double",
-      .options = (struct ObjC_FieldOptions) {
-        .access = 1, .access = 0, .serializable = 1,
-      },
-      .size = sizeof(double),
-      .offset = ((size_t) & (((Rectangle * ) 0) -> Height))
-    },
-  }
+    .size = 1,
+    .fields = {
+        {
+            .name = "X2", .type = "double", .options = (struct ObjC_FieldOptions) {
+                .access = 1, .access = 0, .serializable = 1,
+            }, .size = sizeof(double), .offset = ((size_t) & (((Rectangle * ) 0) -> X2))
+        },
+    }
 };
 struct ObjC_ClassFunctionsDescriptor Rectangle_Functions = {
-  .size = 2,
-  .functions = {
-    {
-      .name = "area", .return_type = "double", .options = (struct ObjC_FuncOptions) {
-        .access = 1, .access = 0,
-      }, .return_size = sizeof(double), .offset = ((size_t) & (((Rectangle * ) 0) -> area)), .argument_count = 0, .arguments = (struct ObjC_FuncArgument * ) & Rectangle_Func_area_Arguments
-    },
-    {
-      .name = "scale",
-      .return_type = "void",
-      .options = (struct ObjC_FuncOptions) {
-        .access = 1, .access = 0,
-      },
-      .return_size = 0,
-      .offset = ((size_t) & (((Rectangle * ) 0) -> scale)),
-      .argument_count = 1,
-      .arguments = (struct ObjC_FuncArgument * ) & Rectangle_Func_scale_Arguments
-    },
-  }
+    .size = 2,
+    .functions = {
+        {
+            .name = "area", .return_type = "double", .options = (struct ObjC_FuncOptions) {
+                .access = 1, .access = 0,
+            }, .return_size = sizeof(double), .offset = ((size_t) & (((Rectangle * ) 0) -> area)), .argument_count = 2, .arguments = (struct ObjC_FuncArgument * ) & Rectangle_Func_area_Arguments
+        },
+        {
+            .name = "scale",
+            .return_type = "void",
+            .options = (struct ObjC_FuncOptions) {
+                .access = 1, .access = 0,
+            },
+            .return_size = 0,
+            .offset = ((size_t) & (((Rectangle * ) 0) -> scale)),
+            .argument_count = 3,
+            .arguments = (struct ObjC_FuncArgument * ) & Rectangle_Func_scale_Arguments
+        },
+    }
 };
 struct ObjC_GeneralClassDescriptor Rectangle_Class = {
-  .name = "Rectangle",
-  .fields = & Rectangle_Fields,
-  .functions = & Rectangle_Functions
+    .name = "Rectangle",
+    .total_size = sizeof(Rectangle),
+    .super = & Shape_Class,
+    .fields = & Rectangle_Fields,
+    .functions = & Rectangle_Functions
 };
-double Rectangle_area(Rectangle * this) {
-  return this -> Width * this -> Height;
+double Rectangle_area(struct Rectangle * this, double scale) {
+    struct ObjC_State __objc__state = {
+        .class = & Rectangle_Class
+    };
+    do {
+        printf("    Called Rectangle.area with scale=%f\n", scale);
+        double * procf = ((double * ) objc_find( & __objc__state, (ObjC_BaseObject * ) this, "ProtectedField"));
+        printf("    Trying to get protected field of Shape in Rectangle context. Expect %p==%p\n", procf, & this -> super.ProtectedField);
+        double * privf = ((double * ) objc_find( & __objc__state, (ObjC_BaseObject * ) this, "PrivateField"));
+        printf("    Trying to get private field of Shape in Rectangle context. Expect %p==0\n", privf);
+        return this -> super.Width * this -> super.Height + 1;
+    } while (0);
 }
-void Rectangle_scale(Rectangle * this, double factor) {
-  this -> Width *= factor;
-  this -> Height *= factor;
+void Rectangle_scale(struct Rectangle * this, double factor, double factor2) {
+    struct ObjC_State __objc__state = {
+        .class = & Rectangle_Class
+    };
+    do {
+        this -> super.Width *= factor;
+        this -> super.Height *= factor;
+    } while (0);
+}
+Rectangle * Rectangle_new() {
+    struct ObjC_State __objc__state = {
+        .class = & Rectangle_Class
+    };
+    Rectangle * this = (Rectangle * ) malloc(sizeof(Rectangle));
+    this -> class = & Rectangle_Class;
+    ((ObjC_BaseObject * ) this) -> object = (struct ObjC_Object * ) malloc(sizeof(struct ObjC_Object));
+    ((ObjC_BaseObject * ) this) -> object -> total_size = sizeof(Rectangle);
+    Shape * sp = Shape_new();
+    memcpy( & this -> super, sp, sizeof(Shape));
+    free(sp);
+    ((ObjC_BaseObject * ) this) -> object -> total_size = sizeof(Rectangle);
+    ((ObjC_BaseObject * ) this) -> object -> topClass = & Rectangle_Class;
+    this -> super.Width = 0;
+    this -> super.Height = 0;
+    this -> super.X = 0;
+    this -> super.Y = 0;
+    this -> area = Rectangle_area;
+    this -> scale = Rectangle_scale;
+    return this;
+};
+
+typedef struct CoolRectangle {
+    Rectangle super;
+    struct ObjC_GeneralClassDescriptor * class;
+    char * coolrectname;
+}
+CoolRectangle;
+struct ObjC_ClassFieldsDescriptor CoolRectangle_Fields = {
+    .size = 1,
+    .fields = {
+        {
+            .name = "coolrectname", .type = "char*", .options = (struct ObjC_FieldOptions) {
+                .access = 1,
+            }, .size = sizeof(char * ), .offset = ((size_t) & (((CoolRectangle * ) 0) -> coolrectname))
+        },
+    }
+};
+struct ObjC_ClassFunctionsDescriptor CoolRectangle_Functions = {
+    .size = 0,
+    .functions = {}
+};
+struct ObjC_GeneralClassDescriptor CoolRectangle_Class = {
+    .name = "CoolRectangle",
+    .total_size = sizeof(CoolRectangle),
+    .super = & Rectangle_Class,
+    .fields = & CoolRectangle_Fields,
+    .functions = & CoolRectangle_Functions
+};
+CoolRectangle * CoolRectangle_new() {
+    struct ObjC_State __objc__state = {
+        .class = & CoolRectangle_Class
+    };
+    CoolRectangle * this = (CoolRectangle * ) malloc(sizeof(CoolRectangle));
+    this -> class = & CoolRectangle_Class;
+    ((ObjC_BaseObject * ) this) -> object = (struct ObjC_Object * ) malloc(sizeof(struct ObjC_Object));
+    ((ObjC_BaseObject * ) this) -> object -> total_size = sizeof(CoolRectangle);
+    Rectangle * sp = Rectangle_new();
+    memcpy( & this -> super, sp, sizeof(Rectangle));
+    free(sp);
+    ((ObjC_BaseObject * ) this) -> object -> total_size = sizeof(CoolRectangle);
+    ((ObjC_BaseObject * ) this) -> object -> topClass = & CoolRectangle_Class;
+    return this;
 }
 ```
 
@@ -138,47 +343,107 @@ void Rectangle_scale(Rectangle * this, double factor) {
 
 </details>
 
-# "classwalk" output for Rectangle class
+# "test.c" output
 
 ```
-----[Rectangle]----
+Running some tests...
 
-    - FIELD: X
+Creating instance of CoolRectangle that extends Rectangle, that extends Shape.
+Class hierarchy : CoolRectangle -> Rectangle -> Shape
+Trying to find public function "area" of CoolRectangle object. Expect 00000000004015AD == 00000000004015AD
+Trying to get protected field of Shape in outside context. Expect 0000000000000000==0
+Trying to get private field of Shape in outside context. Expect 0000000000000000==0
+Calling Rectangle.area (from casting CoolRectangle* to Rectangle*) with scale=1
+    Called Rectangle.area with scale=1.000000
+    Trying to get protected field of Shape in Rectangle context. Expect 0000000000B42478==0000000000B42478
+    Trying to get private field of Shape in Rectangle context. Expect 0000000000000000==0
+Calling classwalk on CoolRectangle class descriptor
+
+
+----[CoolRectangle]----
+    - FIELD: coolrectname
     -   - Size : 8 bytes
-    -   - Offset : 8 bytes
-    -   - Typeof : "double"
-    -   - Options: serializable(1) access(0)
-    - FIELD: Y
+    -   - Offset : 112 bytes
+    -   - Typeof : "char*"
+    -   - Options: serializable(0) access(1)
+
+
+----[Rectangle]----
+    - FIELD: X2
     -   - Size : 8 bytes
-    -   - Offset : 16 bytes
-    -   - Typeof : "double"
-    -   - Options: serializable(1) access(0)
-    - FIELD: Width
-    -   - Size : 8 bytes
-    -   - Offset : 24 bytes
-    -   - Typeof : "double"
-    -   - Options: serializable(1) access(0)
-    - FIELD: Height
-    -   - Size : 8 bytes
-    -   - Offset : 32 bytes
+    -   - Offset : 80 bytes
     -   - Typeof : "double"
     -   - Options: serializable(1) access(0)
     - FUNCTION: area
     -   - Return size : 8 bytes
-    -   - Offset : 40 bytes
+    -   - Offset : 88 bytes
     -   - Return type : "double"
     -   - Options: access(0)
-    -   - Argument count : 0
-    - FUNCTION: scale
-    -   - Return size : 0 bytes
-    -   - Offset : 48 bytes
-    -   - Return type : "void"
-    -   - Options: access(0)
-    -   - Argument count : 1
-        - ARGUMENT: factor
+    -   - Argument count : 2
+        - ARGUMENT: this
         -   - Offset : 0 bytes
         -   - Size : 8 bytes
+        -   - Type : "struct Rectangle *"
+        - ARGUMENT: scale
+        -   - Offset : 8 bytes
+        -   - Size : 8 bytes
         -   - Type : "double"
+    - FUNCTION: scale
+    -   - Return size : 0 bytes
+    -   - Offset : 96 bytes
+    -   - Return type : "void"
+    -   - Options: access(0)
+    -   - Argument count : 3
+        - ARGUMENT: this
+        -   - Offset : 0 bytes
+        -   - Size : 8 bytes
+        -   - Type : "struct Rectangle *"
+        - ARGUMENT: factor
+        -   - Offset : 8 bytes
+        -   - Size : 8 bytes
+        -   - Type : "double"
+        - ARGUMENT: factor2
+        -   - Offset : 16 bytes
+        -   - Size : 8 bytes
+        -   - Type : "double"
+
+
+----[Shape]----
+    - FIELD: X
+    -   - Size : 8 bytes
+    -   - Offset : 16 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(0)
+    - FIELD: Y
+    -   - Size : 8 bytes
+    -   - Offset : 24 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(0)
+    - FIELD: Width
+    -   - Size : 8 bytes
+    -   - Offset : 32 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(0)
+    - FIELD: Height
+    -   - Size : 8 bytes
+    -   - Offset : 40 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(0)
+    - FIELD: PublicField
+    -   - Size : 8 bytes
+    -   - Offset : 48 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(0)
+    - FIELD: ProtectedField
+    -   - Size : 8 bytes
+    -   - Offset : 56 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(1)
+    - FIELD: PrivateField
+    -   - Size : 8 bytes
+    -   - Offset : 64 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(2)
 ```
 
 # a more in-depth overview
@@ -202,3 +467,17 @@ objectc2 stores function arguments' name and type as strings, but also offset an
 next (normally previous, but list is reversed) arguments, effectively calculating the offset of said argument
 
 usually, sizeof(void) returns 1, which is a problem for the return size of functions, but this is fixed using a macro trick (see `oi_is_void`)
+
+## constructors
+constructors can be manually or automatically implemented. 
+
+both automatically take care of allocating memory for the object's entire class hierarchy, assigning functions and returning the pointer.
+
+the function name has the format ClassName_new(). currently constructors cannot take arguments.
+
+## reflection
+based on the information stored by objectc, one can kinda implement basic reflection
+
+the `$ptr` and `$get` macros (wrappers for the objc_find function) can access object fields and functions by name and also checks for access based on the context it is called in.
+
+note: to use this functionality, an 'outside' state must be set in a function that does not belong to a class by using the `$o` macro before any next code
