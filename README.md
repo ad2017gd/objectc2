@@ -343,47 +343,107 @@ CoolRectangle * CoolRectangle_new() {
 
 </details>
 
-# "classwalk" output for Rectangle class
+# "test.c" output
 
 ```
-----[Rectangle]----
+Running some tests...
 
-    - FIELD: X
+Creating instance of CoolRectangle that extends Rectangle, that extends Shape.
+Class hierarchy : CoolRectangle -> Rectangle -> Shape
+Trying to find public function "area" of CoolRectangle object. Expect 00000000004015AD == 00000000004015AD
+Trying to get protected field of Shape in outside context. Expect 0000000000000000==0
+Trying to get private field of Shape in outside context. Expect 0000000000000000==0
+Calling Rectangle.area (from casting CoolRectangle* to Rectangle*) with scale=1
+    Called Rectangle.area with scale=1.000000
+    Trying to get protected field of Shape in Rectangle context. Expect 0000000000B42478==0000000000B42478
+    Trying to get private field of Shape in Rectangle context. Expect 0000000000000000==0
+Calling classwalk on CoolRectangle class descriptor
+
+
+----[CoolRectangle]----
+    - FIELD: coolrectname
     -   - Size : 8 bytes
-    -   - Offset : 8 bytes
-    -   - Typeof : "double"
-    -   - Options: serializable(1) access(0)
-    - FIELD: Y
+    -   - Offset : 112 bytes
+    -   - Typeof : "char*"
+    -   - Options: serializable(0) access(1)
+
+
+----[Rectangle]----
+    - FIELD: X2
     -   - Size : 8 bytes
-    -   - Offset : 16 bytes
-    -   - Typeof : "double"
-    -   - Options: serializable(1) access(0)
-    - FIELD: Width
-    -   - Size : 8 bytes
-    -   - Offset : 24 bytes
-    -   - Typeof : "double"
-    -   - Options: serializable(1) access(0)
-    - FIELD: Height
-    -   - Size : 8 bytes
-    -   - Offset : 32 bytes
+    -   - Offset : 80 bytes
     -   - Typeof : "double"
     -   - Options: serializable(1) access(0)
     - FUNCTION: area
     -   - Return size : 8 bytes
-    -   - Offset : 40 bytes
+    -   - Offset : 88 bytes
     -   - Return type : "double"
     -   - Options: access(0)
-    -   - Argument count : 0
-    - FUNCTION: scale
-    -   - Return size : 0 bytes
-    -   - Offset : 48 bytes
-    -   - Return type : "void"
-    -   - Options: access(0)
-    -   - Argument count : 1
-        - ARGUMENT: factor
+    -   - Argument count : 2
+        - ARGUMENT: this
         -   - Offset : 0 bytes
         -   - Size : 8 bytes
+        -   - Type : "struct Rectangle *"
+        - ARGUMENT: scale
+        -   - Offset : 8 bytes
+        -   - Size : 8 bytes
         -   - Type : "double"
+    - FUNCTION: scale
+    -   - Return size : 0 bytes
+    -   - Offset : 96 bytes
+    -   - Return type : "void"
+    -   - Options: access(0)
+    -   - Argument count : 3
+        - ARGUMENT: this
+        -   - Offset : 0 bytes
+        -   - Size : 8 bytes
+        -   - Type : "struct Rectangle *"
+        - ARGUMENT: factor
+        -   - Offset : 8 bytes
+        -   - Size : 8 bytes
+        -   - Type : "double"
+        - ARGUMENT: factor2
+        -   - Offset : 16 bytes
+        -   - Size : 8 bytes
+        -   - Type : "double"
+
+
+----[Shape]----
+    - FIELD: X
+    -   - Size : 8 bytes
+    -   - Offset : 16 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(0)
+    - FIELD: Y
+    -   - Size : 8 bytes
+    -   - Offset : 24 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(0)
+    - FIELD: Width
+    -   - Size : 8 bytes
+    -   - Offset : 32 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(0)
+    - FIELD: Height
+    -   - Size : 8 bytes
+    -   - Offset : 40 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(0)
+    - FIELD: PublicField
+    -   - Size : 8 bytes
+    -   - Offset : 48 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(0)
+    - FIELD: ProtectedField
+    -   - Size : 8 bytes
+    -   - Offset : 56 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(1)
+    - FIELD: PrivateField
+    -   - Size : 8 bytes
+    -   - Offset : 64 bytes
+    -   - Typeof : "double"
+    -   - Options: serializable(1) access(2)
 ```
 
 # a more in-depth overview
