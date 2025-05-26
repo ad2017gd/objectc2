@@ -72,7 +72,8 @@ $class(CoolRectangle $extends Rectangle,
 </td>
 <td>
 
-```c#include "objectc.h"
+```c
+#include "objectc.h"
 
 typedef struct Shape {
     struct ObjC_GeneralClassDescriptor * class;
