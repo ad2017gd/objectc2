@@ -12,6 +12,8 @@
 #define omp_comma(...) ,
 #define omp_empty(...)
 #define omp_zero(...) 0
+#define omp_one(...) 1
+
 
 
 

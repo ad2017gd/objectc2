@@ -1,34 +1,67 @@
 #include "objectc.h"
+#include <stdio.h>
 
 
-$class(Rectangle,
+$class(Shape,
     $fields(
         ($opt(PUBLIC SERIALIZABLE), double, X),
         ($opt(PUBLIC SERIALIZABLE), double, Y),
         ($opt(PUBLIC SERIALIZABLE), double, Width),
-        ($opt(PUBLIC SERIALIZABLE), double, Height)
+        ($opt(PUBLIC SERIALIZABLE), double, Height),
+        ($opt(PUBLIC SERIALIZABLE), double, PublicField),
+        ($opt(PROTECTED SERIALIZABLE), double, ProtectedField),
+        ($opt(PRIVATE SERIALIZABLE), double, PrivateField)
     ),
-    $functions(
-        ($opt(PUBLIC), double, area, $arg(), $body(
-            return this->Width*this->Height;
-        )),
-
-        ($opt(PUBLIC STATIC), double, testt, $arg(), $body(
-            return 1;
-        )),
-
-        ($opt(PUBLIC), void, scale, $arg( (double, factor), (double, factor2), (char, x), (int, factor3) ), $body(
-            this->Width*=factor;
-            this->Height*=factor;
-        ))
-    )
+    $functions()
 );
 
 
-void classwalk(struct ObjC_GeneralClassDescriptor d)
-{
 
-    printf("----[%s]----\n\n", d.name);
+$class(Rectangle $extends Shape,
+    $fields(
+        ($opt(PUBLIC SERIALIZABLE), double, X2)
+    ),
+    $functions(
+        ($opt(PUBLIC), double, area, $arg((double,scale)), $body({
+            double* procf = $ptr(this, double*, PrivateField);
+            printf("Called Rectangle.area with %p, %f\n", procf, scale);
+            return this->super.Width * this->super.Height + 1;
+        })),
+
+        ($opt(PUBLIC), void, scale, $arg( (double, factor), (double, factor2), (char, x), (int, factor3) ), $body({
+            this->super.Width*=factor;
+            this->super.Height*=factor;
+        }))
+    ),
+    $constructor(
+        this->super.Width = 0;
+        this->super.Height = 0;
+        this->super.X = 0;
+        this->super.Y = 0;
+    )
+);
+$class(CoolRectangle $extends Rectangle,
+    $fields(),
+    $functions()
+)
+
+void classwalk(struct ObjC_GeneralClassDescriptor d)
+{$o
+    
+    CoolRectangle* cb = CoolRectangle_new();
+    //printf("%s -> %s -> %s\n", cb->class->name, cb->super.class->name, cb->super.super.class->name);
+    void (*ptr)(void*,double) = *($ptr(cb, void (**)(void*,double), area));
+    //printf("expect %p == %p\n", ptr, Rectangle_area);
+    Rectangle* rect = (Rectangle*)cb;
+    rect->area(rect, 1);
+    
+    
+
+    return;
+    //ptr(args.this, args.scale);
+    
+
+    printf("----[%s]----\n", d.name);
     for (int i = 0; i < d.fields->size; i++)
     {
         struct ObjC_ClassField f = d.fields->fields[i];
