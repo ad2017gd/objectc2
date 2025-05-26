@@ -467,3 +467,17 @@ objectc2 stores function arguments' name and type as strings, but also offset an
 next (normally previous, but list is reversed) arguments, effectively calculating the offset of said argument
 
 usually, sizeof(void) returns 1, which is a problem for the return size of functions, but this is fixed using a macro trick (see `oi_is_void`)
+
+## constructors
+constructors can be manually or automatically implemented. 
+
+both automatically take care of allocating memory for the object's entire class hierarchy, assigning functions and returning the pointer.
+
+the function name has the format ClassName_new(). currently constructors cannot take arguments.
+
+## reflection
+based on the information stored by objectc, one can kinda implement basic reflection
+
+the `$ptr` and `$get` macros (wrappers for the objc_find function) can access object fields and functions by name and also checks for access based on the context it is called in.
+
+note: to use this functionality, an 'outside' state must be set in a function that does not belong to a class by using the `$o` macro before any next code
