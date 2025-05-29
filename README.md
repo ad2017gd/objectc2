@@ -350,22 +350,40 @@ Running some tests...
 
 Creating instance of CoolRectangle that extends Rectangle, that extends Shape.
 Class hierarchy : CoolRectangle -> Rectangle -> Shape
-Trying to find public function "area" of CoolRectangle object. Expect 00000000004015AD == 00000000004015AD
+Trying to find public function "area" of CoolRectangle object. Expect 0000000000000000 == 00000000004022ED
 Trying to get protected field of Shape in outside context. Expect 0000000000000000==0
 Trying to get private field of Shape in outside context. Expect 0000000000000000==0
 Calling Rectangle.area (from casting CoolRectangle* to Rectangle*) with scale=1
     Called Rectangle.area with scale=1.000000
-    Trying to get protected field of Shape in Rectangle context. Expect 0000000000B42478==0000000000B42478
+    Trying to get protected field of Shape in Rectangle context. Expect 0000000000C42478==0000000000C42478
     Trying to get private field of Shape in Rectangle context. Expect 0000000000000000==0
+Trying to find class Rectangle by name. Expect 00000000004052E0==00000000004052E0
+Serializing the CoolRectangle instance.
+Result: {"__objc_iden__":"CoolRectangle","CoolInt":74,"CoolInt2":6969,"SomeUnknownStruct":[1,0,0,0,2,0,0,0,0,0,0,0,0,0,12,64],"subRectangle":{"__objc_iden__":"Rectangle","X2":0.000000,"X":0.000000,"Y":0.000000,"Width":0.000000,"Height":0.000000},"X2":0.000000}
 Calling classwalk on CoolRectangle class descriptor
 
 
 ----[CoolRectangle]----
-    - FIELD: coolrectname
-    -   - Size : 8 bytes
+    - FIELD: CoolInt
+    -   - Size : 4 bytes
     -   - Offset : 112 bytes
-    -   - Typeof : "char*"
-    -   - Options: serializable(0) access(1)
+    -   - Typeof : "int"
+    -   - Options: serializable(1) access(0)
+    - FIELD: CoolInt2
+    -   - Size : 2 bytes
+    -   - Offset : 116 bytes
+    -   - Typeof : "short"
+    -   - Options: serializable(1) access(0)
+    - FIELD: SomeUnknownStruct
+    -   - Size : 16 bytes
+    -   - Offset : 120 bytes
+    -   - Typeof : "mystruct"
+    -   - Options: serializable(1) access(0)
+    - FIELD: subRectangle
+    -   - Size : 8 bytes
+    -   - Offset : 136 bytes
+    -   - Typeof : "Rectangle"
+    -   - Options: serializable(1) access(0)
 
 
 ----[Rectangle]----
@@ -481,3 +499,11 @@ based on the information stored by objectc, one can kinda implement basic reflec
 the `$ptr` and `$get` macros (wrappers for the objc_find function) can access object fields and functions by name and also checks for access based on the context it is called in.
 
 note: to use this functionality, an 'outside' state must be set in a function that does not belong to a class by using the `$o` macro before any next code
+
+all classes are registered before entering main using a compiler specific 'constructor' functionality. use `objc_find_class` or browse `objc_registered_classes[]` for all class descriptors.
+
+## serialization
+currently, one can serialize a class using the builtin `objc_tojson` function. for a field to be serializable, it must be marked as public and serializable.
+
+supports: integer, floating-point, string, class instance. any other unknown type will be serialized byte by byte
+TODO: arrays?
