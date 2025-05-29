@@ -1,8 +1,11 @@
 #pragma once
+
 #include <stdlib.h>
 #include <string.h>
 #include "objectc_MP.h"
+#include <stddef.h>
 
+enum { ou_counter_base = __COUNTER__ };
 
 // Type definition will be used for valid string serialization
 typedef char * string_t;
@@ -12,11 +15,14 @@ typedef wchar_t * wstring_t;
 #endif
 
 /*
+* THIS IMPLEMENTATION DOESNT WORK!
 * Check offset for one struct's member
 * Get a null pointer to the struct, access the member, get the pointer to the member and cast to size_t to get the offset
 */
-#define ou_offset(type,member) ((size_t)&(((type*)0)->member))
+//#define ou_offset(type,member) ((size_t)&(((type*)0)->member))
 
+// just use builtin at this point
+#define ou_offset(type,member) offsetof(type,member)
 
 // --------- INTERNAL -------------
 
@@ -59,7 +65,7 @@ typedef wchar_t * wstring_t;
 #define oi_prototype_fields(...) omp_for(oi_expand_prototype_fields,, __VA_ARGS__)
 
 // FIELDS     DESCRIPTOR
-#define oi_create_field(class_name, field_options, field_datatype, field_name) { .name = omp_string(field_name), .type = omp_string(field_datatype), .options = (struct ObjC_FieldOptions) oi_unpack_opts field_options, .size = sizeof(field_datatype), .offset = ou_offset(class_name, field_name) },
+#define oi_create_field(class_name, field_options, field_datatype, field_name) { .name = omp_string(field_name), .type = omp_string(field_datatype), .options = (struct ObjC_FieldOptions) oi_unpack_opts field_options, .size = sizeof(field_datatype), .offset = ou_offset(C##class_name, field_name) },
 
 #define oi_expand_field(datatype, name, options, ...) datatype, name, options
 
@@ -135,7 +141,7 @@ typedef wchar_t * wstring_t;
 
 #define oi_expand_function(datatype, name, options, ...) datatype, name, options, __VA_ARGS__
 
-#define oi_create_function_(class_name, field_options, field_datatype, field_name, args, body, ...) { .name = omp_string(field_name), .return_type = omp_string(field_datatype), .options = (struct ObjC_FuncOptions) oi_unpack_opts field_options, .return_size = oi_return_size(field_datatype), .offset = ou_offset(class_name, field_name), .argument_count = omp_narg args, .arguments = (struct ObjC_FuncArgument *)& class_name ## _Func_ ## field_name ## _Arguments },
+#define oi_create_function_(class_name, field_options, field_datatype, field_name, args, body, ...) { .name = omp_string(field_name), .return_type = omp_string(field_datatype), .options = (struct ObjC_FuncOptions) oi_unpack_opts field_options, .return_size = oi_return_size(field_datatype), .offset = ou_offset(C##class_name, field_name), .argument_count = omp_narg args, .arguments = (struct ObjC_FuncArgument *)& class_name ## _Func_ ## field_name ## _Arguments },
 #define oi_create_function(class_name, field_options, field_datatype, field_name, args, body, ...) oi_create_function_(class_name, field_options, field_datatype, field_name, oi_add_this(class_name, args, field_options), body, __VA_ARGS__)
 
 #define oi_expand_function_descriptor__(cl_name, ...) oi_create_function(cl_name, __VA_ARGS__)
@@ -223,11 +229,9 @@ struct ObjC_Object {
 typedef struct { 
     struct ObjC_GeneralClassDescriptor* class; 
     struct ObjC_Object* object;
-} ObjC_BaseObject;
-typedef struct { 
-    ObjC_BaseObject super;
-    struct ObjC_GeneralClassDescriptor* class;
-} ObjC_SubObject;
+} CObjC_BaseObject;
+typedef CObjC_BaseObject* ObjC_BaseObject;
+
 
 struct ObjC_State {
     struct ObjC_GeneralClassDescriptor* class;
@@ -266,10 +270,22 @@ struct ObjC_State {
 // The class descriptors use the normal ObjectC naming convention, so ClassName_Fields, ClassName_Functions, ClassName_Class
 // The class definition contains a pointer to the class descriptor, which is the "class" member
 
+#if defined(_MSC_VER)
+#define oi_autoregister(fn) \
+    void fn(void); \
+    __pragma(section(".CRT$XCU", read)) \
+    __declspec(allocate(".CRT$XCU")) void (*fn##_)(void) = fn; \
+    void fn(void)
+#else
+#define oi_autoregister(fn) \
+    void fn(void) __attribute__((constructor)); \
+    void fn(void)
+#endif
+
 
 
 #define oi_if_base() struct ObjC_GeneralClassDescriptor* class; struct ObjC_Object* object;
-#define oi_if_extends(ext) ext super; struct ObjC_GeneralClassDescriptor* class;
+#define oi_if_extends(ext) C##ext super; struct ObjC_GeneralClassDescriptor* class;
 
 #define $extends ,
 #define oi_add_comma(cl_name, ...) cl_name,
@@ -290,30 +306,35 @@ struct ObjC_ClassFunctionsDescriptor cl_name ## _Functions = { \
 }; \
 struct ObjC_GeneralClassDescriptor cl_name ## _Class = { \
     .name = omp_string(cl_name), \
-    .total_size = sizeof(cl_name), \
+    .total_size = sizeof(C##cl_name), \
     omp_if_zero(omp_narg(_EXTENDS), oi_if_base_desc, oi_if_extends_desc, _EXTENDS) \
     .fields = & cl_name ## _Fields, \
     .functions = & cl_name ## _Functions \
 }; \
-oi_function_bodies(cl_name, _FUNCS)
+oi_function_bodies(cl_name, _FUNCS) \
+oi_autoregister(cl_name ## __register) { \
+    objc_registered_classes[objc_registered_classes_count++] = & cl_name ## _Class;\
+} 
 
 // CONSTRUCTORS
 
+
 #define oi_construct_base(cl_name, ...) \
-cl_name* this = (cl_name*)malloc(sizeof(cl_name)); \
+cl_name this = (cl_name)malloc(sizeof(C##cl_name)); \
+memset(this, 0, sizeof(C##cl_name)); \
 this->class = & cl_name ## _Class; \
-((ObjC_BaseObject*)this)->object = (struct ObjC_Object*)malloc(sizeof(struct ObjC_Object)); \
-((ObjC_BaseObject*)this)->object->total_size = sizeof(cl_name)
+ObjC_BaseObject bobj = ((ObjC_BaseObject)this); \
+bobj->object = (struct ObjC_Object*)malloc(sizeof(struct ObjC_Object)); \
+bobj->object->total_size = sizeof(C##cl_name); 
 
 #define oi_construct_extends(cl_name, extends, ...) \
 oi_construct_base(cl_name); \
-extends* sp = extends ## _new(); \
-memcpy(&this->super, sp, sizeof(extends)); \
+extends sp = extends ## _new(); \
+memcpy(&this->super, sp, sizeof(C##extends)); \
 free(sp); \
-((ObjC_BaseObject*)this)->object->total_size = sizeof(cl_name); \
-((ObjC_BaseObject*)this)->object->topClass = & cl_name ## _Class
+bobj->object->total_size = sizeof(C##cl_name); \
+bobj->object->topClass = & cl_name ## _Class;
 
-#define oi_construct_return return this
 
 #define oi_constructor_expand_func_(cl_name, field_options, field_datatype, field_name, args, body) this->field_name = cl_name ## _ ## field_name;
 #define oi_constructor_expand_func(cl_name, ...) oi_constructor_expand_func_(cl_name, __VA_ARGS__)
@@ -321,21 +342,22 @@ free(sp); \
 #define oi_constructor_assign_funcs(cl_name, ...) omp_for(oi_constructor_assign_func,cl_name,__VA_ARGS__)
 
 
+
 #define oi_constructor(cl_name, _EXTENDS, _FUNCS, _CONSTRUCTOR, ...) \
-cl_name* cl_name ## _new() { \
+cl_name cl_name ## _new() { \
     struct ObjC_State __objc__state = {.class = & cl_name ## _Class}; \
     omp_if_2nd_zero(omp_narg(_EXTENDS), oi_construct_base, oi_construct_extends, cl_name, _EXTENDS); \
     oi_unpack_generic _CONSTRUCTOR \
     oi_constructor_assign_funcs(cl_name, oi_unpack_generic _FUNCS) \
-    oi_construct_return; \
+    return this; \
 }
 
 #define oi_default_constructor(cl_name, _EXTENDS, _FUNCS, ...) \
-cl_name* cl_name ## _new() { \
+cl_name cl_name ## _new() { \
     struct ObjC_State __objc__state = {.class = & cl_name ## _Class}; \
     omp_if_2nd_zero(omp_narg(_EXTENDS), oi_construct_base, oi_construct_extends, cl_name, _EXTENDS); \
     oi_constructor_assign_funcs(cl_name, oi_unpack_generic _FUNCS) \
-    oi_construct_return; \
+    return this; \
 }
 
 
@@ -344,7 +366,8 @@ typedef struct cl_name { \
     omp_if_zero(omp_narg(_EXTENDS), oi_if_base, oi_if_extends, _EXTENDS) \
     oi_prototype_fields(oi_unpack_generic _FIELDS) \
     oi_prototype_functions(cl_name, oi_unpack_generic _FUNCS) \
-} cl_name; \
+} C ## cl_name; \
+typedef C ## cl_name * cl_name; \
 oi_class_common(cl_name, _EXTENDS, oi_unpack_generic _FIELDS, oi_unpack_generic _FUNCS) \
 omp_if_zero(omp_narg(__VA_ARGS__), oi_default_constructor, oi_constructor, cl_name, _EXTENDS, _FUNCS, __VA_ARGS__)
 
@@ -365,10 +388,14 @@ omp_if_zero(omp_narg(__VA_ARGS__), oi_default_constructor, oi_constructor, cl_na
 
 
 
-void* objc_find(struct ObjC_State* state, ObjC_BaseObject* obj, char* name);
+void* objc_find(struct ObjC_State* state, ObjC_BaseObject obj, const char* name);
 
-#define $ptr(obj, type, name) ((type)objc_find(&__objc__state, (ObjC_BaseObject*)obj, name))
+#define $ptr(obj, type, name) ((type)objc_find(&__objc__state, (ObjC_BaseObject)obj, name))
 #define $get(obj, type, name) (*$ptr(obj,type *,name))
-#define $obj(obj) (((ObjC_BaseObject*)obj)->object)
+#define $obj(obj) (((ObjC_BaseObject)obj)->object)
 
 #define $o struct ObjC_State __objc__state = {.class = 0};
+
+struct ObjC_GeneralClassDescriptor* objc_registered_classes[1024];
+size_t objc_registered_classes_count;
+void objc_tojson(ObjC_BaseObject obj, char* out, size_t maxLen);

@@ -14,6 +14,8 @@ $class(Shape,
     $functions()
 );
 
+
+
 $class(Rectangle $extends Shape,
     $fields(
         ($opt(PUBLIC SERIALIZABLE), double, X2)),
@@ -39,15 +41,58 @@ $class(Rectangle $extends Shape,
         this->super.Y = 0;
      )
 );
+/*
+serializing field subRectangle
+    objc_find: X size=8 off=16
+    objc_find: Y size=8 off=24
+    objc_find: Width size=8 off=32
+    objc_find: Height size=8 off=40
+    objc_find: PublicField size=8 off=48
+    objc_find: ProtectedField size=8 off=56
+    objc_find: PrivateField size=8 off=64
+    objc_find: X2 size=8 off=80
+    objc_find: CoolInt size=4 off=112
+    objc_find: CoolInt2 size=4 off=116
+    objc_find: subRectangle size=8 off=120
+
+    serializing field subRectangle
+    objc_find: X size=8 off=16
+    objc_find: Y size=8 off=24
+    objc_find: Width size=8 off=32
+    objc_find: Height size=8 off=40
+    objc_find: PublicField size=8 off=48
+    objc_find: ProtectedField size=8 off=56
+    objc_find: PrivateField size=8 off=64
+    objc_find: X2 size=8 off=80
+    objc_find: CoolInt size=4 off=112
+    objc_find: CoolInt2 size=2 off=116
+    objc_find: subRectangle size=8 off=120
+    */
+
+typedef struct {
+    int a;
+    char b;
+    double f;
+} mystruct;
 
 $class(CoolRectangle $extends Rectangle,
     $fields(
-        ($opt(), char*, coolrectname)
+        ($opt(PUBLIC SERIALIZABLE), int, CoolInt),
+        ($opt(PUBLIC SERIALIZABLE), short, CoolInt2),
+        ($opt(PUBLIC SERIALIZABLE), mystruct, SomeUnknownStruct),
+        ($opt(PUBLIC SERIALIZABLE), Rectangle, subRectangle)
     ),
     $functions(
 
+    ),
+    $constructor(
+        this->subRectangle = Rectangle_new();
+        this->CoolInt = 74;
+        this->CoolInt2 = 6969;
+        this->SomeUnknownStruct = (mystruct){1,2,3.5};
     )
 )
+
 
 
 
@@ -56,13 +101,12 @@ $class(CoolRectangle $extends Rectangle,
 {
     $o
 
-        
-
     struct ObjC_GeneralClassDescriptor *cur = &cls;
     while (cur)
     {
         struct ObjC_GeneralClassDescriptor d = *cur;
         printf("\n\n----[%s]----\n", d.name);
+
         for (int i = 0; i < d.fields->size; i++)
         {
             struct ObjC_ClassField f = d.fields->fields[i];
@@ -105,8 +149,12 @@ $class(CoolRectangle $extends Rectangle,
 
 int main()
 {$o
+
+
     printf("Running some tests...\n\nCreating instance of CoolRectangle that extends Rectangle, that extends Shape.\n");
-    CoolRectangle *cb = CoolRectangle_new();
+    CoolRectangle cb = CoolRectangle_new();
+
+
     printf("Class hierarchy : %s -> %s -> %s\n", cb->class->name, cb->super.class->name, cb->super.super.class->name);
     void (*ptr)(void *, double) = *($ptr(cb, void (**)(void *, double), "area"));
     printf("Trying to find public function \"area\" of CoolRectangle object. Expect %p == %p\n", ptr, Rectangle_area);
@@ -116,9 +164,17 @@ int main()
     double *privf = $ptr(cb, double *, "PrivateField");
     printf("Trying to get private field of Shape in outside context. Expect %p==0\n", privf, 0);
 
-    Rectangle *rect = (Rectangle *)cb;
+    Rectangle rect = (Rectangle)cb;
     printf("Calling Rectangle.area (from casting CoolRectangle* to Rectangle*) with scale=1\n");
     rect->area(rect, 1);
+
+    printf("Trying to find class Rectangle by name. Expect %p==%p\n", objc_find_class("Rectangle"), &Rectangle_Class);
+
+    printf("Serializing the CoolRectangle instance.\n");
+    char* buf = malloc(256);
+    objc_tojson(cb, buf, 256);
+    printf("Result: %s\n",buf);
+    free(buf);
 
     printf("Calling classwalk on CoolRectangle class descriptor\n");
 
