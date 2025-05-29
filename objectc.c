@@ -280,6 +280,7 @@ void _objc_tojson_depopulate(Object* object) {
         switch(cur.type) {
             case OBJECT: {
                 _objc_tojson_depopulate(cur.value);
+                free(((Object*)cur.value)->children);
                 break;
             }
             default: {
@@ -302,4 +303,5 @@ void objc_tojson(ObjC_BaseObject obj, char *out, size_t maxLen)
     };
 
     _objc_tojson_depopulate(&object);
+    free(object.children);
 }
