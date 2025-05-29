@@ -291,7 +291,7 @@ void _objc_tojson_depopulate(Object* object) {
     }
 }
 
-void objc_tojson(ObjC_BaseObject obj, char *out, size_t maxLen)
+int objc_tojson(ObjC_BaseObject obj, char *out, size_t maxLen)
 {
     struct ObjC_State __objc__state = {.class = obj->class};
 
@@ -300,8 +300,11 @@ void objc_tojson(ObjC_BaseObject obj, char *out, size_t maxLen)
 
     if(!_objc_tojson_write(obj, &object, out, maxLen, 0)) {
         memset(out, 0, maxLen);
+        return 0;
     };
 
     _objc_tojson_depopulate(&object);
     free(object.children);
+
+    return 1;
 }
