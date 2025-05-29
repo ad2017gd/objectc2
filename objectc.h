@@ -399,3 +399,4 @@ void* objc_find(struct ObjC_State* state, ObjC_BaseObject obj, const char* name)
 struct ObjC_GeneralClassDescriptor* objc_registered_classes[1024];
 size_t objc_registered_classes_count;
 void objc_tojson(ObjC_BaseObject obj, char* out, size_t maxLen);
+struct ObjC_GeneralClassDescriptor *objc_find_class(const char *name);
