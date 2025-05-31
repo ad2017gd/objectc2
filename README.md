@@ -505,5 +505,7 @@ all classes are registered before entering main using a compiler specific 'const
 ## serialization
 currently, one can serialize a class using the builtin `objc_tojson` function. for a field to be serializable, it must be marked as public and serializable.
 
-supports: integer, floating-point, string, class instance. any other unknown type will be serialized byte by byte
+supports: integer, floating-point, bool, string, class instance. any other unknown type will be serialized byte by byte
 TODO: arrays?
+
+no deserialization supported yet (too hard for me)
