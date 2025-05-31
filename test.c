@@ -80,7 +80,9 @@ $class(CoolRectangle $extends Rectangle,
         ($opt(PUBLIC SERIALIZABLE), int, CoolInt),
         ($opt(PUBLIC SERIALIZABLE), short, CoolInt2),
         ($opt(PUBLIC SERIALIZABLE), mystruct, SomeUnknownStruct),
-        ($opt(PUBLIC SERIALIZABLE), Rectangle, subRectangle)
+        ($opt(PUBLIC SERIALIZABLE), string_t, str),
+        ($opt(PUBLIC SERIALIZABLE), Rectangle, subRectangle),
+        ($opt(PUBLIC SERIALIZABLE), _Bool, boolean)
     ),
     $functions(
 
@@ -90,6 +92,8 @@ $class(CoolRectangle $extends Rectangle,
         this->CoolInt = 74;
         this->CoolInt2 = 6969;
         this->SomeUnknownStruct = (mystruct){1,2,3.5};
+        this->str = "aa\"funny";
+        this->boolean = TRUE;
     )
 )
 
@@ -154,6 +158,16 @@ int main()
     printf("Running some tests...\n\nCreating instance of CoolRectangle that extends Rectangle, that extends Shape.\n");
     CoolRectangle cb = CoolRectangle_new();
 
+    printf("Serializing the CoolRectangle instance.\n");
+    char* buf = malloc(512);
+    objc_tojson(cb, buf, 512);
+    printf("Result: %s\n",buf);
+
+    //objc_fromjson(buf);
+    
+    free(buf);
+    return 0;
+
 
     printf("Class hierarchy : %s -> %s -> %s\n", cb->class->name, cb->super.class->name, cb->super.super.class->name);
     void (*ptr)(void *, double) = *($ptr(cb, void (**)(void *, double), "area"));
@@ -170,11 +184,7 @@ int main()
 
     printf("Trying to find class Rectangle by name. Expect %p==%p\n", objc_find_class("Rectangle"), &Rectangle_Class);
 
-    printf("Serializing the CoolRectangle instance.\n");
-    char* buf = malloc(256);
-    objc_tojson(cb, buf, 256);
-    printf("Result: %s\n",buf);
-    free(buf);
+    
 
     printf("Calling classwalk on CoolRectangle class descriptor\n");
 

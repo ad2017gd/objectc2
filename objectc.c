@@ -117,6 +117,7 @@ typedef struct
         DOUBLE,
         STRING,
         OBJECT,
+        BOOL,
         MEMCPY
     } type;
 } KeyValuePair;
@@ -150,7 +151,10 @@ void _objc_tojson_populate(ObjC_BaseObject obj, Object *object)
 
             KeyValuePair cur;
             void *data;
-            cur.name = field->name;
+
+            size_t fLen = strlen(field->name)+1;
+            cur.name = malloc(fLen);
+            memcpy(cur.name, field->name, fLen);
 
 
             void *src = objc_find(&__objc__state, obj, field->name);
@@ -183,10 +187,17 @@ void _objc_tojson_populate(ObjC_BaseObject obj, Object *object)
                 char **str = (char **)src;
                 size_t len = strlen(*str);
                 data = malloc(len);
-                memcpy(data, *str, len);
+                memcpy(data, *str, len+1);
 
                 cur.type = STRING;
                 cur.memSize = len + 1;
+            } else if (!strcmp("const bool", field->type) || !strcmp("bool", field->type) || !strcmp("const _Bool", field->type) || !strcmp("_Bool", field->type)) {
+                _Bool *bl = (_Bool*)src;
+                data = malloc(sizeof(_Bool));
+                memcpy(data, bl, sizeof(_Bool));
+
+                cur.type = BOOL;
+                cur.memSize = sizeof(_Bool);
             }
             else
             {
@@ -213,6 +224,13 @@ void _objc_tojson_populate(ObjC_BaseObject obj, Object *object)
     }
     
     object->children = realloc(object->children, object->size * sizeof(KeyValuePair));
+}
+
+size_t _countChars(const char* in, char c) {
+    size_t x = 0;
+    do {
+        if(*in == c) x++;
+    } while(*(in++));
 }
 
 size_t _objc_tojson_write(ObjC_BaseObject obj, Object* object, char *out, size_t maxLen, size_t scursor) {
@@ -242,7 +260,25 @@ size_t _objc_tojson_write(ObjC_BaseObject obj, Object* object, char *out, size_t
                 break;
             }
             case STRING: {
-                cursor += sprintf_s(out+cursor, maxLen-cursor, "\"%s\":\"%s\"", cur.name, cur.value);
+                size_t newLen = strlen(cur.value) + _countChars(cur.value, '"');
+                char* fixStr = malloc(newLen+1);
+                size_t cntSource = 0;
+                size_t cntDest = 0;
+                do {
+                    char cch = ((char*)cur.value)[cntSource];
+                    if(cch == '"') {
+                        fixStr[cntDest++] = '\\';
+                    }
+                    fixStr[cntDest++] = cch;
+                } while(((char*)cur.value)[++cntSource]);
+                fixStr[newLen+1] = 0;
+
+                cursor += sprintf_s(out+cursor, maxLen-cursor, "\"%s\":\"%s\"", cur.name, fixStr);
+                free(fixStr);
+                break;
+            }
+            case BOOL: {
+                cursor += sprintf_s(out+cursor, maxLen-cursor, "\"%s\":%s", cur.name, (*((_Bool*)cur.value)) ? "true" : "false");
                 break;
             }
             case MEMCPY: {
@@ -285,15 +321,16 @@ void _objc_tojson_depopulate(Object* object) {
             }
             default: {
                 free(cur.value);
+                free(cur.name);
                 break;
             }
         }
     }
 }
 
-int objc_tojson(ObjC_BaseObject obj, char *out, size_t maxLen)
+int objc_tojson(void* obj, char *out, size_t maxLen)
 {
-    struct ObjC_State __objc__state = {.class = obj->class};
+    struct ObjC_State __objc__state = {.class = ((ObjC_BaseObject)obj)->class};
 
     Object object = {.children = malloc(16 * sizeof(KeyValuePair)), .size = 0, .allocatedSize = 16};
     _objc_tojson_populate(obj, &object);
@@ -308,3 +345,104 @@ int objc_tojson(ObjC_BaseObject obj, char *out, size_t maxLen)
 
     return 1;
 }
+/*
+IM TOO STUPID FOR THIS
+
+int _indexOf(char* str, char of) {
+    char* orig = str;
+    while(*(str)) {
+        if((of == 0 && *str != ' ') || (*str == of)) {
+            if(str-orig > 0) {
+                if(*(str-1) != '\\')
+                    return str-orig;
+            }
+            else return str-orig;
+        }
+        str++;
+    }
+    return -1;
+}
+
+void _objc_fromjson_populate(char* in, Object* object, size_t scursor) {
+    size_t cursor = scursor;
+    size_t maxLen = strlen(in);
+    char tmp[8192];
+
+    size_t start = _indexOf(in, '{');
+    if(start == -1) return;
+    cursor+=start;
+    printf("fromjson: found { at %d\n", cursor);
+    while(TRUE) {
+        size_t cur = cursor;
+        KeyValuePair pair;
+        
+
+        size_t keyStart = cur + _indexOf(in+cur, '"');
+        size_t keyEnd = keyStart + _indexOf(in+keyStart+1, '"') + 1;
+
+        if(keyStart==-1 || keyEnd == -1) break;
+
+        pair.name = malloc(keyEnd - keyStart);
+        memcpy(pair.name, in+keyStart+1, keyEnd - keyStart - 1);
+        pair.name[keyEnd - keyStart] = 0;
+
+        size_t separator = keyEnd + _indexOf(in+keyEnd, ':');
+        if(separator == -1) break;
+
+        size_t valueStart = separator+1;
+
+        size_t nextNonWhitespace = valueStart + _indexOf(in+valueStart, 0);
+
+        size_t pairEnd = 0;
+
+        char* litValue = 0;
+
+        switch(in[nextNonWhitespace]) {
+            case '\"': {
+                // string value
+                size_t stringEnd = valueStart + _indexOf(in+valueStart+1, '"')+1;
+
+                litValue = malloc(stringEnd-valueStart);
+                memcpy(litValue, in+valueStart+1, stringEnd - valueStart - 1);
+                litValue[stringEnd - valueStart - 1] = 0;
+
+                pairEnd = stringEnd + _indexOf(in+stringEnd, ',');
+                if(pairEnd == stringEnd - 1) pairEnd = stringEnd + _indexOf(in+stringEnd, '}');
+                break;
+            }
+            case '[': {
+                // array value
+                break;
+            }
+            case '{': {
+                // object value
+                break;
+            }
+            default: {
+                // int/double/(bool?)
+                pairEnd = valueStart + _indexOf(in+valueStart, ',');
+                
+                if(pairEnd == valueStart - 1) pairEnd = valueStart + _indexOf(in+valueStart, '}');
+
+                litValue = malloc((pairEnd-1)-valueStart);
+                memcpy(litValue, in+valueStart+1, (pairEnd-1) - valueStart - 1);
+                litValue[(pairEnd-1) - valueStart - 1] = 0;
+                break;
+            }
+        }
+        
+
+        
+
+        printf("%s=%s\n", pair.name, litValue);
+
+        if(in[pairEnd] == '}') break;
+        cursor += pairEnd - cur;
+    }
+}
+
+ObjC_BaseObject objc_fromjson(char* in) {$o
+    Object object = {.children = malloc(16 * sizeof(KeyValuePair)), .size = 0, .allocatedSize = 16};
+    _objc_fromjson_populate(in, &object, 0);
+    return 0;
+}*/
