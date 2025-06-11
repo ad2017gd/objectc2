@@ -508,4 +508,4 @@ currently, one can serialize a class using the builtin `objc_tojson` function. f
 supports: integer, floating-point, bool, string, class instance. any other unknown type will be serialized byte by byte
 TODO: arrays?
 
-no deserialization supported yet (too hard for me)
+one can also deserialize JSON into an instance using `objc_fromjson` function.
