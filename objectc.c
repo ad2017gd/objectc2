@@ -583,6 +583,7 @@ ObjC_BaseObject _objc_fromjson_create(Object* object, _Bool super) {
         struct ObjC_ClassField* field = _objc_find_desc(this, cur->name);
         if(_target == 0 || field == 0) continue;
 
+        if(!field->options.serializable && field->options.access != ACCESS_PUBLIC) continue;
 
         switch(cur->type) {
             
