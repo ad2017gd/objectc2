@@ -349,17 +349,20 @@ CoolRectangle * CoolRectangle_new() {
 Running some tests...
 
 Creating instance of CoolRectangle that extends Rectangle, that extends Shape.
+Serializing the CoolRectangle instance.
+Result: {"__objc_iden__":"CoolRectangle","CoolInt":74,"CoolInt2":6969,"SomeUnknownStruct":[1,0,0,0,2,0,0,0,0,0,0,0,0,0,12,64],"str":"aa\"funny","subRectangle":{"__objc_iden__":"Rectangle","X2":0.000000,"X":0.000000,"Y":0.000000,"Width":0.000000,"Height":0.000000,"PublicField":0.000000},"boolean":true,"X2":0.000000,"X":0.000000,"Y":0.000000,"Width":0.000000,"Height":0.000000,"PublicField":0.000000}
+Deserializing JSON back to CoolRectangle.
+Serializing the NEW CoolRectangle instance. Expecting result == previous.
+Result: {"__objc_iden__":"CoolRectangle","CoolInt":74,"CoolInt2":6969,"SomeUnknownStruct":[1,0,0,0,2,0,0,0,0,0,0,0,0,0,12,64],"str":"aa\"funny","subRectangle":{"__objc_iden__":"Rectangle","X2":0.000000,"X":0.000000,"Y":0.000000,"Width":0.000000,"Height":0.000000,"PublicField":0.000000},"boolean":true,"X2":0.000000,"X":0.000000,"Y":0.000000,"Width":0.000000,"Height":0.000000,"PublicField":0.000000}
 Class hierarchy : CoolRectangle -> Rectangle -> Shape
-Trying to find public function "area" of CoolRectangle object. Expect 0000000000000000 == 00000000004022ED
+Trying to find public function "area" of CoolRectangle object. Expect 0000000000000000 == 000000000040350D
 Trying to get protected field of Shape in outside context. Expect 0000000000000000==0
 Trying to get private field of Shape in outside context. Expect 0000000000000000==0
 Calling Rectangle.area (from casting CoolRectangle* to Rectangle*) with scale=1
     Called Rectangle.area with scale=1.000000
     Trying to get protected field of Shape in Rectangle context. Expect 0000000000C42478==0000000000C42478
     Trying to get private field of Shape in Rectangle context. Expect 0000000000000000==0
-Trying to find class Rectangle by name. Expect 00000000004052E0==00000000004052E0
-Serializing the CoolRectangle instance.
-Result: {"__objc_iden__":"CoolRectangle","CoolInt":74,"CoolInt2":6969,"SomeUnknownStruct":[1,0,0,0,2,0,0,0,0,0,0,0,0,0,12,64],"subRectangle":{"__objc_iden__":"Rectangle","X2":0.000000,"X":0.000000,"Y":0.000000,"Width":0.000000,"Height":0.000000},"X2":0.000000}
+Trying to find class Rectangle by name. Expect 00000000004062E0==00000000004062E0
 Calling classwalk on CoolRectangle class descriptor
 
 
@@ -379,10 +382,20 @@ Calling classwalk on CoolRectangle class descriptor
     -   - Offset : 120 bytes
     -   - Typeof : "mystruct"
     -   - Options: serializable(1) access(0)
-    - FIELD: subRectangle
+    - FIELD: str
     -   - Size : 8 bytes
     -   - Offset : 136 bytes
+    -   - Typeof : "string_t"
+    -   - Options: serializable(1) access(0)
+    - FIELD: subRectangle
+    -   - Size : 8 bytes
+    -   - Offset : 144 bytes
     -   - Typeof : "Rectangle"
+    -   - Options: serializable(1) access(0)
+    - FIELD: boolean
+    -   - Size : 1 bytes
+    -   - Offset : 152 bytes
+    -   - Typeof : "_Bool"
     -   - Options: serializable(1) access(0)
 
 
