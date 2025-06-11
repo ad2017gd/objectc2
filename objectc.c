@@ -46,6 +46,8 @@ void *objc_find_access(struct ObjC_State *state, ObjC_BaseObject obj, struct Obj
 
     return ((void *)obj + offset);
 }
+
+
 /*
 void *objc_find(struct ObjC_State *state, ObjC_BaseObject obj, const char *name)
 {
@@ -81,6 +83,8 @@ void *objc_find(struct ObjC_State *state, ObjC_BaseObject obj, const char *name)
     } while (offset < obj->object->total_size);
     return 0;
 }*/
+
+
 void *objc_find(struct ObjC_State *state, ObjC_BaseObject obj, const char *name)
 {
     struct ObjC_GeneralClassDescriptor *cur = obj->object->topClass;
@@ -106,20 +110,23 @@ void *objc_find(struct ObjC_State *state, ObjC_BaseObject obj, const char *name)
     }
     return 0;
 }
-typedef struct
+
+
+typedef enum
 {
-    char *name;
-    void *value;
-    size_t memSize;
-    enum
-    {
         INT,
         DOUBLE,
         STRING,
         OBJECT,
         BOOL,
         MEMCPY
-    } type;
+} KVType;
+typedef struct
+{
+    char *name;
+    void *value;
+    size_t memSize;
+    KVType type;
 } KeyValuePair;
 typedef struct
 {
@@ -138,11 +145,14 @@ void _objc_tojson_populate(ObjC_BaseObject obj, Object *object)
     KeyValuePair className = {"__objc_iden__", class->name, strlen(class->name) + 1, STRING};
     object->children[object->size++] = className;
 
+
     while (class)
     {
         for (int i = 0; i < class->fields->size; i++)
         {
+            
             struct ObjC_ClassField *field = &class->fields->fields[i];
+            
 
             if (!field->options.serializable)
                 continue;
@@ -160,6 +170,7 @@ void _objc_tojson_populate(ObjC_BaseObject obj, Object *object)
             void *src = objc_find(&__objc__state, obj, field->name);
             if (!src)
                 continue;
+
 
             if (object->size == object->allocatedSize)
             {
@@ -181,12 +192,13 @@ void _objc_tojson_populate(ObjC_BaseObject obj, Object *object)
                 cur.type = OBJECT;
                 data = subObj;
                 cur.memSize = 0;
-            }
+            } // TODO: remove excess whitespaces / actually parse the type
             else if (!strcmp("const char*", field->type) || !strcmp("const char *", field->type) || !strcmp("char*", field->type) || !strcmp("char *", field->type) || !strcmp("string_t", field->type) || !strcmp("const string_t", field->type))
             {
+                
                 char **str = (char **)src;
                 size_t len = strlen(*str);
-                data = malloc(len);
+                data = malloc(len+1);
                 memcpy(data, *str, len+1);
 
                 cur.type = STRING;
@@ -231,6 +243,7 @@ size_t _countChars(const char* in, char c) {
     do {
         if(*in == c) x++;
     } while(*(in++));
+    return x;
 }
 
 size_t _objc_tojson_write(ObjC_BaseObject obj, Object* object, char *out, size_t maxLen, size_t scursor) {
@@ -270,8 +283,10 @@ size_t _objc_tojson_write(ObjC_BaseObject obj, Object* object, char *out, size_t
                         fixStr[cntDest++] = '\\';
                     }
                     fixStr[cntDest++] = cch;
+                    
                 } while(((char*)cur.value)[++cntSource]);
-                fixStr[newLen+1] = 0;
+                fixStr[newLen] = 0;
+                
 
                 cursor += sprintf_s(out+cursor, maxLen-cursor, "\"%s\":\"%s\"", cur.name, fixStr);
                 free(fixStr);
@@ -345,104 +360,294 @@ int objc_tojson(void* obj, char *out, size_t maxLen)
 
     return 1;
 }
-/*
-IM TOO STUPID FOR THIS
 
-int _indexOf(char* str, char of) {
-    char* orig = str;
-    while(*(str)) {
-        if((of == 0 && *str != ' ') || (*str == of)) {
-            if(str-orig > 0) {
-                if(*(str-1) != '\\')
-                    return str-orig;
-            }
-            else return str-orig;
-        }
-        str++;
-    }
-    return -1;
-}
+size_t _objc_fromjson_populate(char* in, Object* object, size_t scursor) {
+    enum {
+        NONE,
+        WAITKEY,
+        KEY,
+        KVSEP,
+        WAITVALUE,
+        VALUE,
+        ESEP
+    } state = NONE;
 
-void _objc_fromjson_populate(char* in, Object* object, size_t scursor) {
+    KVType valueType = DOUBLE;
+
     size_t cursor = scursor;
     size_t maxLen = strlen(in);
+
     char tmp[8192];
+    size_t tIdx = 0;
 
-    size_t start = _indexOf(in, '{');
-    if(start == -1) return;
-    cursor+=start;
-    printf("fromjson: found { at %d\n", cursor);
-    while(TRUE) {
-        size_t cur = cursor;
-        KeyValuePair pair;
+
+    while(cursor < maxLen) {
+        //printf("    state %d char %c\n", state, in[cursor]);
+        if(in[cursor] == '{' && state == NONE) {
+            state = WAITKEY;
+        }
+
+        if(state == KEY) {
+            if(in[cursor] == '"' && in[cursor-1] != '\\') {
+                // create object entry, add key
+
+                tmp[tIdx++] = 0;
+                if(object->size >= object->allocatedSize) {
+                    object->children = realloc(object->children, (object->allocatedSize + 32)*sizeof(KeyValuePair));
+                    object->allocatedSize+=32;
+                }
+                object->children[object->size].name = malloc(tIdx);
+                memcpy(object->children[object->size].name, tmp, tIdx);
+
+
+                state = KVSEP;
+                tIdx=0;
+            } else {
+                tmp[tIdx++] = in[cursor];
+            }
+        }
+        if(state == VALUE) {
+            _Bool end = FALSE;
+            Object *subObj = 0;
+
+            if(valueType == STRING) {
+                if(in[cursor] == '"' && in[cursor-1] != '\\') end = TRUE;
+            }
+            if(valueType == MEMCPY) {
+                if(in[cursor] == ']') end = TRUE;
+            }
+            if(valueType == OBJECT) {
+                subObj = malloc(sizeof(Object));
+                subObj->children = malloc(16 * sizeof(KeyValuePair));
+                subObj->size = 0;
+                subObj->allocatedSize = 16;
+
+                size_t subEnd = _objc_fromjson_populate(in, subObj, cursor);
+
+                cursor = subEnd+1;
+                end = TRUE;
+            }
+            if(valueType == INT || valueType == DOUBLE || valueType == BOOL) {
+                if(in[cursor] == ',' || in[cursor] == '}') end = TRUE;
+            }
+
+            if(end) {
+                // parse value & add to obj
+
+                tmp[tIdx++] = 0;
+
+                
+                object->children[object->size].type = valueType;
+                if(valueType == OBJECT) {
+                    object->children[object->size].value = subObj;
+                    object->children[object->size].memSize = 0;
+                }
+                if(valueType == STRING) {
+                    
+
+                    object->children[object->size].value = malloc(tIdx);
+                    size_t cnt = 0;
+                    size_t vcnt = 0;
+                    while(tmp[cnt]) {
+                        if(tmp[cnt] == '\\' && tmp[cnt-1] != '\\') {
+                            cnt++;
+                            continue;
+                        }
+                        ((char*)object->children[object->size].value)[vcnt++] = tmp[cnt++]; 
+                    }
+                    ((char*)object->children[object->size].value)[vcnt++] = 0;
+
+                    object->children[object->size].memSize = tIdx;
+                }
+                if(valueType == BOOL) {
+                    object->children[object->size].value = malloc(sizeof(_Bool));
+                    *((_Bool*)(object->children[object->size].value)) = memcmp(tmp, "true", sizeof("true")-1) == 0;
+                    object->children[object->size].memSize = sizeof(_Bool);
+                }
+                if(valueType == MEMCPY) {
+                    size_t memsize = 0;
+                    // check empty array?
+                    _Bool hasValue = FALSE;
+                    for(int i = 0; i < strlen(tmp); i++) {
+                        int asnum = tmp[i] - '0';
+                        if(tmp[i] == ',') memsize++;
+                        if(asnum >= 0 && asnum <= 9) hasValue = TRUE;
+                    }
+                    if(hasValue) memsize++;
+
+                    char* mem = malloc(memsize);
+                    size_t midx = 0;
+
+                    char curval[4];
+                    int vidx = 0;
+                    for(int i = 0; i < strlen(tmp)+1; i++) {
+                        int asnum = tmp[i] - '0';
+                        if(tmp[i] == ',' || tmp[i] == 0) {
+                            if(vidx == 0) curval[vidx++] = '0';
+                            curval[vidx] = 0;
+                            mem[midx++] = atoi(curval);
+                            vidx = 0;
+                        } else
+                        if(asnum >= 0 && asnum <= 9) curval[vidx++] = tmp[i];
+                    }
+
+                    object->children[object->size].value = mem;
+
+                    object->children[object->size].memSize = memsize;
+                }
+                if(valueType == INT) {
+                    long long* p = malloc(sizeof(long long));
+                    *p = atoll(tmp);
+
+                    object->children[object->size].value = p;
+                    object->children[object->size].memSize = sizeof(long long);
+                }
+                if(valueType == DOUBLE) {
+                    double* p = malloc(sizeof(double));
+                    *p = atof(tmp);
+
+                    object->children[object->size].value = p;
+                    object->children[object->size].memSize = sizeof(double);
+                }
+
+                object->size++;
+                state = ESEP;
+                tIdx=0;
+            } else {
+                if(valueType == INT && in[cursor] == '.') valueType = DOUBLE;
+                tmp[tIdx++] = in[cursor];
+            }
+        }
+
+
+        if(state == WAITVALUE && in[cursor] != ' ') {
+            if(in[cursor] == '"') valueType = STRING;
+            else if(in[cursor] == '{') {valueType = OBJECT;cursor--;}
+            else if(memcmp(in+cursor, "true", sizeof("true")-1) == 0 || memcmp(in+cursor, "false", sizeof("false")-1) == 0) {valueType = BOOL; cursor--;}
+            else if(in[cursor] == '[') valueType = MEMCPY;
+            else {valueType = INT;cursor--;} // assume? convert to DOUBLE if floating point
+            
+            state = VALUE;
+        }
+        if(state == KVSEP && in[cursor] == ':') {
+            state = WAITVALUE;
+        }
+        if(state == ESEP && in[cursor] == ',') {
+            state = WAITKEY;
+        }
+        if(state == WAITKEY && in[cursor] == '"') {
+            state = KEY;
+        }
+        if((state == WAITKEY || state == ESEP || state == WAITVALUE || state == KVSEP) && in[cursor] == '}') {
+            break;
+        }
         
+        cursor++;
+    }
+    return cursor;
+}
 
-        size_t keyStart = cur + _indexOf(in+cur, '"');
-        size_t keyEnd = keyStart + _indexOf(in+keyStart+1, '"') + 1;
+struct ObjC_ClassField *_objc_find_desc(ObjC_BaseObject obj, const char *name)
+{
+    struct ObjC_GeneralClassDescriptor *cur = obj->object->topClass;
+    while(cur) {
+        struct ObjC_GeneralClassDescriptor *super = cur->super;
+        for (size_t j = 0; j < cur->fields->size; j++)
+        {
+            size_t offset = cur->fields->fields[j].offset;
+            if (!strcmp(cur->fields->fields[j].name, name))
+            {
+                return &cur->fields->fields[j];
+            }
+        }
+        cur = cur->super;
+    }
+    return 0;
+}
 
-        if(keyStart==-1 || keyEnd == -1) break;
+typedef struct { 
+    CObjC_BaseObject super;
+    struct ObjC_GeneralClassDescriptor* class; 
+} CObjC_ExtObject;
+typedef CObjC_ExtObject* ObjC_ExtObject;
 
-        pair.name = malloc(keyEnd - keyStart);
-        memcpy(pair.name, in+keyStart+1, keyEnd - keyStart - 1);
-        pair.name[keyEnd - keyStart] = 0;
+ObjC_BaseObject _objc_fromjson_create(Object* object, _Bool super) {
+    struct ObjC_GeneralClassDescriptor* cd = objc_find_class(object->children[0].value);
+    ObjC_BaseObject this = cd->constructor();
 
-        size_t separator = keyEnd + _indexOf(in+keyEnd, ':');
-        if(separator == -1) break;
+    struct ObjC_State _st = {.class = 0};
+    for(size_t i = 1; i < object->size; i++) {
+        KeyValuePair* cur = &object->children[i];
 
-        size_t valueStart = separator+1;
+        void* _target = objc_find(&_st, this, cur->name);
+        struct ObjC_ClassField* field = _objc_find_desc(this, cur->name);
+        if(_target == 0 || field == 0) continue;
 
-        size_t nextNonWhitespace = valueStart + _indexOf(in+valueStart, 0);
 
-        size_t pairEnd = 0;
+        switch(cur->type) {
+            
+            case STRING:{
+                // TODO: fix memleak for string literal in future
+                    // like
+                    /*
+                        class{
+                            string a = "some const string"
+                        }
+                        
+                        if i serialize and deserialize string lit. become allocated and -> memleak
+                        lol
 
-        char* litValue = 0;
-
-        switch(in[nextNonWhitespace]) {
-            case '\"': {
-                // string value
-                size_t stringEnd = valueStart + _indexOf(in+valueStart+1, '"')+1;
-
-                litValue = malloc(stringEnd-valueStart);
-                memcpy(litValue, in+valueStart+1, stringEnd - valueStart - 1);
-                litValue[stringEnd - valueStart - 1] = 0;
-
-                pairEnd = stringEnd + _indexOf(in+stringEnd, ',');
-                if(pairEnd == stringEnd - 1) pairEnd = stringEnd + _indexOf(in+stringEnd, '}');
+                        maybe check section of string?
+                    */
+                char* s = malloc(cur->memSize);
+                memcpy(s, cur->value, cur->memSize);
+                *((char**)_target) = s;
                 break;
             }
-            case '[': {
-                // array value
+            case OBJECT:{
+                void* ptr = _objc_fromjson_create(cur->value, TRUE);
+                *((void**)(_target)) = ptr;
                 break;
             }
-            case '{': {
-                // object value
+
+            
+            default:{
+                
+                memcpy(_target, cur->value, field->size);
+                break;
+            }
+        }
+    }
+    return this;
+}
+
+void _objc_fromjson_depopulate(Object* object) {
+    for(int i = 0; i < object->size; i++) {
+        KeyValuePair cur = object->children[i];
+        switch(cur.type) {
+            case OBJECT: {
+                _objc_fromjson_depopulate(cur.value);
+                free(((Object*)cur.value)->children);
                 break;
             }
             default: {
-                // int/double/(bool?)
-                pairEnd = valueStart + _indexOf(in+valueStart, ',');
-                
-                if(pairEnd == valueStart - 1) pairEnd = valueStart + _indexOf(in+valueStart, '}');
-
-                litValue = malloc((pairEnd-1)-valueStart);
-                memcpy(litValue, in+valueStart+1, (pairEnd-1) - valueStart - 1);
-                litValue[(pairEnd-1) - valueStart - 1] = 0;
+                free(cur.value);
+                free(cur.name);
                 break;
             }
         }
-        
-
-        
-
-        printf("%s=%s\n", pair.name, litValue);
-
-        if(in[pairEnd] == '}') break;
-        cursor += pairEnd - cur;
     }
 }
 
 ObjC_BaseObject objc_fromjson(char* in) {$o
     Object object = {.children = malloc(16 * sizeof(KeyValuePair)), .size = 0, .allocatedSize = 16};
     _objc_fromjson_populate(in, &object, 0);
-    return 0;
-}*/
+    
+    if(object.size == 0) return 0;
+
+    ObjC_BaseObject res = _objc_fromjson_create(&object, FALSE);
+
+    _objc_fromjson_depopulate(&object);
+
+    return res;
+}

@@ -207,6 +207,7 @@ struct ObjC_GeneralClassDescriptor {
     struct ObjC_GeneralClassDescriptor* super;
     struct ObjC_ClassFieldsDescriptor* fields;
     struct ObjC_ClassFunctionsDescriptor* functions;
+    void* (*constructor)();
 };
 struct ObjC_ClassFieldsDescriptor {
     size_t size;
@@ -299,12 +300,14 @@ struct ObjC_ClassFunctionsDescriptor cl_name ## _Functions = { \
     .size = omp_narg(_FUNCS), \
     .functions = {oi_function_descriptor(cl_name, _FUNCS)} \
 }; \
+cl_name cl_name ## _new(); \
 struct ObjC_GeneralClassDescriptor cl_name ## _Class = { \
     .name = omp_string(cl_name), \
     .total_size = sizeof(C##cl_name), \
     omp_if_zero(omp_narg(_EXTENDS), oi_if_base_desc, oi_if_extends_desc, _EXTENDS) \
     .fields = & cl_name ## _Fields, \
-    .functions = & cl_name ## _Functions \
+    .functions = & cl_name ## _Functions, \
+    .constructor = (void*)& cl_name ## _new \
 }; \
 oi_function_bodies(cl_name, _FUNCS) \
 oi_autoregister(cl_name ## __register) { \

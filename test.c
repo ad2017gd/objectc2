@@ -75,6 +75,8 @@ typedef struct {
     double f;
 } mystruct;
 
+
+
 $class(CoolRectangle $extends Rectangle,
     $fields(
         ($opt(PUBLIC SERIALIZABLE), int, CoolInt),
@@ -154,7 +156,6 @@ $class(CoolRectangle $extends Rectangle,
 int main()
 {$o
 
-
     printf("Running some tests...\n\nCreating instance of CoolRectangle that extends Rectangle, that extends Shape.\n");
     CoolRectangle cb = CoolRectangle_new();
 
@@ -163,10 +164,16 @@ int main()
     objc_tojson(cb, buf, 512);
     printf("Result: %s\n",buf);
 
-    //objc_fromjson(buf);
+    printf("Deserializing JSON back to CoolRectangle.\n");
+    CoolRectangle fjs = objc_fromjson(buf);
+
+    printf("Serializing the NEW CoolRectangle instance. Expecting result == previous.\n");
+    char* buf2 = malloc(512);
+    objc_tojson(fjs, buf2, 512);
+    printf("Result: %s\n",buf2);
     
     free(buf);
-    return 0;
+    free(buf2);
 
 
     printf("Class hierarchy : %s -> %s -> %s\n", cb->class->name, cb->super.class->name, cb->super.super.class->name);
