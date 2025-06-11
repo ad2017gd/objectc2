@@ -1,5 +1,5 @@
 # objectc2
-work in progress c object library heavily based on macro tricks. currently has no real functionality
+work in progress c object library heavily based on macro tricks.
 
 # short description
 currently can expand simple definition into pretty complete structs containing info about the class such as fields, field options, functions and its arguments etc
@@ -509,3 +509,6 @@ supports: integer, floating-point, bool, string, class instance. any other unkno
 TODO: arrays?
 
 one can also deserialize JSON into an instance using `objc_fromjson` function.
+
+## known issues
+during early development, i assumed MSVC would work perfectly with the macros. however, it seems that it handles `__VA_ARGS__` differently? possibly fixable but would need a huge rework
